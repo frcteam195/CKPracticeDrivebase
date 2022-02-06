@@ -10,6 +10,7 @@
 #include <frc/DigitalInput.h>
 #include <frc/DigitalOutput.h>
 #include <frc/Joystick.h>
+#include "DriveHelper.hpp"
 
 class Robot : public frc::TimedRobot
 {
@@ -44,7 +45,7 @@ private:
 	void setupGenericMotor(TalonFX* motor);
 	void setupFollowerMotor(TalonFX* motor, TalonFX* master);
 	void configRobotMode(ROBOT_POWER_MODE robotMode);
-	bool isJumperConnected();
+	ROBOT_POWER_MODE getJumperMode();
 
 	TalonFX* mLeftMaster;
 	TalonFX* mRightMaster;
@@ -58,9 +59,13 @@ private:
 	ROBOT_POWER_MODE mCurrRobotMode;
 
 	frc::DigitalInput* mFastModeEnableInput;
+	frc::DigitalInput* mMedModeEnableInput;
 	frc::DigitalOutput* mLEDOutput;
 
 	frc::Joystick* mJoystick;
+	DriveHelper mDriveHelper;
+
+	bool mPrevBrakeMode;
 
 	std::vector<TalonFX*> mAllMotors;
 	std::vector<TalonFX*> mMasterMotors;

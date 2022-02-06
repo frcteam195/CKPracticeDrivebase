@@ -9,6 +9,7 @@
 void Robot::RobotInit()
 {
 	mFastModeEnableInput = new frc::DigitalInput(0);
+	mMedModeEnableInput = new frc::DigitalInput(1);
 	mLEDOutput = new frc::DigitalOutput(9);
 	mLEDOutput->Set(false);
 
@@ -42,6 +43,8 @@ void Robot::RobotInit()
 	setupFollowerMotor(mLeftFollower2, mLeftMaster);
 	setupFollowerMotor(mRightFollower1, mRightMaster);
 	setupFollowerMotor(mRightFollower2, mRightMaster);
+
+	mPrevBrakeMode = false;
 }
 
 void Robot::setupGenericMotor(TalonFX* motor)
@@ -59,12 +62,12 @@ void Robot::configRobotMode(ROBOT_POWER_MODE robotMode)
 	{
 		case ROBOT_POWER_MODE::LOW:
 		{
-			defaultCurrConfig = SupplyCurrentLimitConfiguration(true, 20, 0, 0);
+			defaultCurrConfig = SupplyCurrentLimitConfiguration(true, 15, 0, 0);
 			break;
 		}
 		case ROBOT_POWER_MODE::MED:
 		{
-			defaultCurrConfig = SupplyCurrentLimitConfiguration(true, 35, 0, 0);
+			defaultCurrConfig = SupplyCurrentLimitConfiguration(true, 30, 0, 0);
 			break;
 		}
 		case ROBOT_POWER_MODE::FULL:
@@ -90,18 +93,26 @@ void Robot::setupFollowerMotor(TalonFX* motor, TalonFX* master)
 	ck::runTalonFunctionWithRetry([&]() { motor->SetInverted(InvertType::FollowMaster); return motor->GetLastError(); }, motor->GetDeviceID());
 }
 
-bool Robot::isJumperConnected()
+Robot::ROBOT_POWER_MODE Robot::getJumperMode()
 {
-	return !mFastModeEnableInput->Get(); 
+	if (!mFastModeEnableInput->Get())
+	{
+		return ROBOT_POWER_MODE::FULL;
+	}
+	else if (!mMedModeEnableInput->Get())
+	{
+		return ROBOT_POWER_MODE::MED;
+	}
+	return ROBOT_POWER_MODE::LOW;
 }
 
 void Robot::RobotPeriodic()
 {
-	mCurrRobotMode = isJumperConnected() ? ROBOT_POWER_MODE::FULL : ROBOT_POWER_MODE::LOW;
+	mCurrRobotMode = getJumperMode();
 	if (mCurrRobotMode != mPrevRobotMode)
 	{
 		configRobotMode(mCurrRobotMode);
-		if (mCurrRobotMode == ROBOT_POWER_MODE::FULL)
+		if (mCurrRobotMode == ROBOT_POWER_MODE::FULL || mCurrRobotMode == ROBOT_POWER_MODE::MED)
 		{
 			mLEDOutput->Set(true);
 		}
@@ -119,13 +130,17 @@ void Robot::AutonomousPeriodic() {}
 void Robot::TeleopInit() {}
 void Robot::TeleopPeriodic()
 {
+	bool brakeMode = false;
+	bool quickTurn = false;
     double x = 0;
     double y = 0;
     //Check mJoystick is valid and connected
     if (mJoystick && mJoystick->IsConnected())
     {
-        x = ck::math::normalizeWithDeadband(mJoystick->GetX(), DRIVE_JOYSTICK_DEADBAND);
-        y = -ck::math::normalizeWithDeadband(mJoystick->GetY(), DRIVE_JOYSTICK_DEADBAND);
+        x = ck::math::normalizeWithDeadband(mJoystick->GetRawAxis(4), DRIVE_JOYSTICK_DEADBAND);
+        y = -ck::math::normalizeWithDeadband(mJoystick->GetRawAxis(1), DRIVE_JOYSTICK_DEADBAND);
+		quickTurn = mJoystick->GetRawAxis(2) > 0.2;
+		brakeMode = mJoystick->GetRawAxis(3) > 0.2;
     }
 
 	switch(mCurrRobotMode)
@@ -136,20 +151,34 @@ void Robot::TeleopPeriodic()
 		}
 		case ROBOT_POWER_MODE::MED:
 		{
-			x *= 0.75;
-			y *= 0.75;
+			x *= 0.6;
+			y *= 0.6;
 			break;
 		}
 		default:
 		{
-			x *= 0.5;
-			y *= 0.5;
+			x *= 0.35;
+			y *= 0.35;
 			break;
 		}
 	};
 
-	mLeftMaster->Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, std::fmax(std::fmin(y + x, 1.0), -1.0));
-	mRightMaster->Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, std::fmax(std::fmin(y - x, 1.0), -1.0));
+	DriveHelper::DriveMotorValues driveValues = mDriveHelper.calculateOutput(y, x, quickTurn, false);
+	mLeftMaster->Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, std::fmax(std::fmin(driveValues.left, 1.0), -1.0));
+	mRightMaster->Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, std::fmax(std::fmin(driveValues.right, 1.0), -1.0));
+
+	if (brakeMode != mPrevBrakeMode)
+	{
+		NeutralMode bcMode = brakeMode ? NeutralMode::Brake : NeutralMode::Coast;
+		for (TalonFX* tfx : mAllMotors)
+		{
+			ck::runTalonFunctionWithRetry([&]() { tfx->SetNeutralMode(bcMode); return tfx->GetLastError(); }, tfx->GetDeviceID());
+		}
+	}
+	mPrevBrakeMode = brakeMode;
+
+	// mLeftMaster->Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, std::fmax(std::fmin(y + x, 1.0), -1.0));
+	// mRightMaster->Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, std::fmax(std::fmin(y - x, 1.0), -1.0));
 }
 
 void Robot::DisabledInit() {}
