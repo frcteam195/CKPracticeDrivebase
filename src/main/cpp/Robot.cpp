@@ -163,7 +163,7 @@ void Robot::TeleopPeriodic()
 		}
 	};
 
-	DriveHelper::DriveMotorValues driveValues = mDriveHelper.calculateOutput(y, x, quickTurn, false);
+	DriveHelper::DriveMotorValues driveValues = mDriveHelper.calculateOutput(y, x, quickTurn, true);
 	mLeftMaster->Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, std::fmax(std::fmin(driveValues.left, 1.0), -1.0));
 	mRightMaster->Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, std::fmax(std::fmin(driveValues.right, 1.0), -1.0));
 
