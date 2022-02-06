@@ -140,7 +140,7 @@ void Robot::TeleopPeriodic()
         x = ck::math::normalizeWithDeadband(mJoystick->GetRawAxis(4), DRIVE_JOYSTICK_DEADBAND);
         y = -ck::math::normalizeWithDeadband(mJoystick->GetRawAxis(1), DRIVE_JOYSTICK_DEADBAND);
 		quickTurn = mJoystick->GetRawAxis(2) > 0.2;
-		brakeMode = mJoystick->GetRawAxis(3) > 0.2;
+		brakeMode = mJoystick->GetRawButton(5);
     }
 
 	switch(mCurrRobotMode)
