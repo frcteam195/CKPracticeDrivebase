@@ -5,9 +5,15 @@
 #include "Robot.h"
 #include "PhoenixHelper.hpp"
 #include "CKMath.hpp"
+#include "Units.h"
+#include "frc/RobotController.h"
 
 void Robot::RobotInit()
 {
+	networkTable = nt::NetworkTableInstance::GetDefault().GetTable("Drivebase/Values");
+
+	mNavX = new AHRS(frc::SPI::kMXP);
+
 	mFastModeEnableInput = new frc::DigitalInput(0);
 	mMedModeEnableInput = new frc::DigitalInput(1);
 	mLEDOutput = new frc::DigitalOutput(9);
@@ -45,6 +51,8 @@ void Robot::RobotInit()
 	setupFollowerMotor(mRightFollower2, mRightMaster);
 
 	mPrevBrakeMode = false;
+
+	mNavX->ZeroYaw();
 }
 
 void Robot::setupGenericMotor(TalonFX* motor)
@@ -83,7 +91,7 @@ void Robot::configRobotMode(ROBOT_POWER_MODE robotMode)
 	}
 	for (TalonFX* tfx : mAllMotors)
 	{
-		ck::runTalonFunctionWithRetry([&]() { return tfx->ConfigGetSupplyCurrentLimit(defaultCurrConfig); }, tfx->GetDeviceID());
+		ck::runTalonFunctionWithRetry([&]() { return tfx->ConfigSupplyCurrentLimit(defaultCurrConfig); }, tfx->GetDeviceID());
 	}
 }
 
@@ -122,12 +130,31 @@ void Robot::RobotPeriodic()
 		}
 	}
 	mPrevRobotMode = mCurrRobotMode;
+
+	networkTable->PutNumber("BusVoltage", mLeftMaster->GetBusVoltage());
+	networkTable->PutNumber("LeftMasterCurrent", mLeftMaster->GetSupplyCurrent());
+	networkTable->PutNumber("LeftFollower1Current", mLeftFollower1->GetSupplyCurrent());
+	networkTable->PutNumber("LeftFollower2Current", mLeftFollower2->GetSupplyCurrent());
+	networkTable->PutNumber("RightMasterCurrent", mRightMaster->GetSupplyCurrent());
+	networkTable->PutNumber("RightFollower1Current", mRightFollower1->GetSupplyCurrent());
+	networkTable->PutNumber("RightFollower2Current", mRightFollower2->GetSupplyCurrent());
+	networkTable->PutNumber("LeftVelocity", ck::math::convert_native_units_to_rpms(mLeftMaster->GetSelectedSensorVelocity()));
+	networkTable->PutNumber("RightVelocity", ck::math::convert_native_units_to_rpms(mRightMaster->GetSelectedSensorVelocity()));
+	networkTable->PutNumber("LinearSpeedFPS",
+		(ck::math::convert_rpms_to_fps(ck::math::convert_native_units_to_rpms(mLeftMaster->GetSelectedSensorVelocity()))
+		+ ck::math::convert_rpms_to_fps(ck::math::convert_native_units_to_rpms(mRightMaster->GetSelectedSensorVelocity()))) / 2.0);
+
+	networkTable->PutNumber("YawRateDPS", mNavX->GetRate());
+	networkTable->PutNumber("RoboRIOBrownout", frc::RobotController::IsBrownedOut() ? 1 : 0);
 }
 
 void Robot::AutonomousInit() {}
 void Robot::AutonomousPeriodic() {}
 
-void Robot::TeleopInit() {}
+void Robot::TeleopInit()
+{
+	mNavX->ZeroYaw();
+}
 void Robot::TeleopPeriodic()
 {
 	bool brakeMode = false;
@@ -142,6 +169,11 @@ void Robot::TeleopPeriodic()
 		quickTurn = mJoystick->GetRawAxis(2) > 0.2;
 		brakeMode = mJoystick->GetRawButton(5);
     }
+
+	networkTable->PutNumber("LeftRightStick", x);
+	networkTable->PutNumber("ForwardBackStick", y);
+	networkTable->PutNumber("BrakeMode", brakeMode ? 1 : 0);
+	networkTable->PutNumber("QuickTurn", quickTurn ? 1 : 0);
 
 	switch(mCurrRobotMode)
 	{

@@ -11,6 +11,9 @@
 #include <frc/DigitalOutput.h>
 #include <frc/Joystick.h>
 #include "DriveHelper.hpp"
+#include <networktables/NetworkTable.h>
+#include <networktables/NetworkTableInstance.h>
+#include "AHRS.h"
 
 class Robot : public frc::TimedRobot
 {
@@ -70,6 +73,9 @@ private:
 	std::vector<TalonFX*> mAllMotors;
 	std::vector<TalonFX*> mMasterMotors;
 	std::vector<TalonFX*> mFollowerMotors;
+	std::shared_ptr<nt::NetworkTable> networkTable;
+
+	AHRS* mNavX;
 
 	static constexpr double DRIVE_JOYSTICK_DEADBAND = 0.05;
 };
