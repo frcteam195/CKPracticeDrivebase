@@ -27,6 +27,7 @@ void Robot::RobotInit()
 	mRightFollower2 = new TalonFX(6);
 
 	mJoystick = new frc::Joystick(0);
+	mButtonBox1 = new frc::Joystick(2);
 
 	mMasterMotors.push_back(mLeftMaster);
 	mMasterMotors.push_back(mRightMaster);
@@ -114,9 +115,27 @@ Robot::ROBOT_POWER_MODE Robot::getJumperMode()
 	return ROBOT_POWER_MODE::LOW;
 }
 
+Robot::ROBOT_POWER_MODE Robot::getButtonMode()
+{
+	if (mButtonBox1->GetRawButton(3))
+	{
+		return ROBOT_POWER_MODE::FULL;
+	}
+	else if (mButtonBox1->GetRawButton(2))
+	{
+		return ROBOT_POWER_MODE::MED;
+	}
+	else if (mButtonBox1->GetRawButton(1))
+	{
+		return ROBOT_POWER_MODE::LOW;
+	}
+	
+	return mCurrRobotMode;
+}
+
 void Robot::RobotPeriodic()
 {
-	mCurrRobotMode = getJumperMode();
+	mCurrRobotMode = getButtonMode();
 	if (mCurrRobotMode != mPrevRobotMode)
 	{
 		configRobotMode(mCurrRobotMode);

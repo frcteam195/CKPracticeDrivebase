@@ -49,6 +49,7 @@ private:
 	void setupFollowerMotor(TalonFX* motor, TalonFX* master);
 	void configRobotMode(ROBOT_POWER_MODE robotMode);
 	ROBOT_POWER_MODE getJumperMode();
+	ROBOT_POWER_MODE getButtonMode();
 
 	TalonFX* mLeftMaster;
 	TalonFX* mRightMaster;
@@ -67,6 +68,8 @@ private:
 
 	frc::Joystick* mJoystick;
 	DriveHelper mDriveHelper;
+
+	frc::Joystick* mButtonBox1;
 
 	bool mPrevBrakeMode;
 
