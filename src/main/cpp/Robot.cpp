@@ -12,8 +12,6 @@ void Robot::RobotInit()
 {
 	networkTable = nt::NetworkTableInstance::GetDefault().GetTable("Drivebase/Values");
 
-	mNavX = new AHRS(frc::SPI::kMXP);
-
 	mFastModeEnableInput = new frc::DigitalInput(0);
 	mMedModeEnableInput = new frc::DigitalInput(1);
 	mLEDOutput = new frc::DigitalOutput(9);
@@ -22,20 +20,20 @@ void Robot::RobotInit()
 	mLeftMaster = new TalonFX(1);
 	mRightMaster = new TalonFX(4);
 	mLeftFollower1 = new TalonFX(2);
-	mLeftFollower2 = new TalonFX(3);
+	// mLeftFollower2 = new TalonFX(3);
 	mRightFollower1 = new TalonFX(5);
-	mRightFollower2 = new TalonFX(6);
+	// mRightFollower2 = new TalonFX(6);
 
 	mJoystick = new frc::Joystick(0);
-	mButtonBox1 = new frc::Joystick(2);
+	// mButtonBox1 = new frc::Joystick(2);
 
 	mMasterMotors.push_back(mLeftMaster);
 	mMasterMotors.push_back(mRightMaster);
 
 	mFollowerMotors.push_back(mLeftFollower1);
-	mFollowerMotors.push_back(mLeftFollower2);
+	// mFollowerMotors.push_back(mLeftFollower2);
 	mFollowerMotors.push_back(mRightFollower1);
-	mFollowerMotors.push_back(mRightFollower2);
+	// mFollowerMotors.push_back(mRightFollower2);
 
 	mAllMotors.insert(mAllMotors.end(), mMasterMotors.begin(), mMasterMotors.end());
 	mAllMotors.insert(mAllMotors.end(), mFollowerMotors.begin(), mFollowerMotors.end());
@@ -47,13 +45,11 @@ void Robot::RobotInit()
 	ck::runTalonFunctionWithRetry([&]() { mRightMaster->SetInverted(true); return mRightMaster->GetLastError(); }, mRightMaster->GetDeviceID());
 	
 	setupFollowerMotor(mLeftFollower1, mLeftMaster);
-	setupFollowerMotor(mLeftFollower2, mLeftMaster);
+	// setupFollowerMotor(mLeftFollower2, mLeftMaster);
 	setupFollowerMotor(mRightFollower1, mRightMaster);
-	setupFollowerMotor(mRightFollower2, mRightMaster);
+	// setupFollowerMotor(mRightFollower2, mRightMaster);
 
 	mPrevBrakeMode = false;
-
-	mNavX->ZeroYaw();
 }
 
 void Robot::setupGenericMotor(TalonFX* motor)
@@ -117,21 +113,23 @@ Robot::ROBOT_POWER_MODE Robot::getJumperMode()
 
 Robot::ROBOT_POWER_MODE Robot::getButtonMode()
 {
-	if (mButtonBox1->GetRawButton(3))
-	{
-		return ROBOT_POWER_MODE::FULL;
-	}
-	else if (mButtonBox1->GetRawButton(2))
-	{
-		return ROBOT_POWER_MODE::MED;
-	}
-	else if (mButtonBox1->GetRawButton(1))
-	{
-		return ROBOT_POWER_MODE::LOW;
-	}
+	// if (mButtonBox1->GetRawButton(3))
+	// {
+	// 	return ROBOT_POWER_MODE::FULL;
+	// }
+	// else if (mButtonBox1->GetRawButton(2))
+	// {
+	// 	return ROBOT_POWER_MODE::MED;
+	// }
+	// else if (mButtonBox1->GetRawButton(1))
+	// {
+	// 	return ROBOT_POWER_MODE::LOW;
+	// }
 	
-	return mCurrRobotMode;
+	// return mCurrRobotMode;
+	return ROBOT_POWER_MODE::MED;
 }
+
 
 void Robot::RobotPeriodic()
 {
@@ -153,17 +151,16 @@ void Robot::RobotPeriodic()
 	networkTable->PutNumber("BusVoltage", mLeftMaster->GetBusVoltage());
 	networkTable->PutNumber("LeftMasterCurrent", mLeftMaster->GetSupplyCurrent());
 	networkTable->PutNumber("LeftFollower1Current", mLeftFollower1->GetSupplyCurrent());
-	networkTable->PutNumber("LeftFollower2Current", mLeftFollower2->GetSupplyCurrent());
+	// networkTable->PutNumber("LeftFollower2Current", mLeftFollower2->GetSupplyCurrent());
 	networkTable->PutNumber("RightMasterCurrent", mRightMaster->GetSupplyCurrent());
 	networkTable->PutNumber("RightFollower1Current", mRightFollower1->GetSupplyCurrent());
-	networkTable->PutNumber("RightFollower2Current", mRightFollower2->GetSupplyCurrent());
+	// networkTable->PutNumber("RightFollower2Current", mRightFollower2->GetSupplyCurrent());
 	networkTable->PutNumber("LeftVelocity", ck::math::convert_native_units_to_rpms(mLeftMaster->GetSelectedSensorVelocity()));
 	networkTable->PutNumber("RightVelocity", ck::math::convert_native_units_to_rpms(mRightMaster->GetSelectedSensorVelocity()));
 	networkTable->PutNumber("LinearSpeedFPS",
 		(ck::math::convert_rpms_to_fps(ck::math::convert_native_units_to_rpms(mLeftMaster->GetSelectedSensorVelocity()))
 		+ ck::math::convert_rpms_to_fps(ck::math::convert_native_units_to_rpms(mRightMaster->GetSelectedSensorVelocity()))) / 2.0);
 
-	networkTable->PutNumber("YawRateDPS", mNavX->GetRate());
 	networkTable->PutNumber("RoboRIOBrownout", frc::RobotController::IsBrownedOut() ? 1 : 0);
 }
 
@@ -172,7 +169,7 @@ void Robot::AutonomousPeriodic() {}
 
 void Robot::TeleopInit()
 {
-	mNavX->ZeroYaw();
+
 }
 void Robot::TeleopPeriodic()
 {
@@ -186,7 +183,7 @@ void Robot::TeleopPeriodic()
         x = ck::math::normalizeWithDeadband(mJoystick->GetRawAxis(4), DRIVE_JOYSTICK_DEADBAND);
         y = -ck::math::normalizeWithDeadband(mJoystick->GetRawAxis(1), DRIVE_JOYSTICK_DEADBAND);
 		quickTurn = mJoystick->GetRawAxis(2) > 0.2;
-		brakeMode = mJoystick->GetRawButton(5);
+		brakeMode = mJoystick->GetRawButton(5) || mJoystick->GetRawAxis(3) > 0.2;
     }
 
 	networkTable->PutNumber("LeftRightStick", x);
