@@ -182,8 +182,8 @@ void Robot::TeleopPeriodic()
     {
         x = ck::math::normalizeWithDeadband(mJoystick->GetRawAxis(4), DRIVE_JOYSTICK_DEADBAND);
         y = -ck::math::normalizeWithDeadband(mJoystick->GetRawAxis(1), DRIVE_JOYSTICK_DEADBAND);
-		quickTurn = mJoystick->GetRawAxis(2) > 0.2;
-		brakeMode = mJoystick->GetRawButton(5) || mJoystick->GetRawAxis(3) > 0.2;
+//		quickTurn = mJoystick->GetRawAxis(2) > 0.2;
+//		brakeMode = mJoystick->GetRawButton(5) || mJoystick->GetRawAxis(3) > 0.2;
     }
 
 	networkTable->PutNumber("LeftRightStick", x);
@@ -191,27 +191,34 @@ void Robot::TeleopPeriodic()
 	networkTable->PutNumber("BrakeMode", brakeMode ? 1 : 0);
 	networkTable->PutNumber("QuickTurn", quickTurn ? 1 : 0);
 
-	switch(mCurrRobotMode)
-	{
-		case ROBOT_POWER_MODE::FULL:
-		{
-			break;
-		}
-		case ROBOT_POWER_MODE::MED:
-		{
-			x *= 0.6;
-			y *= 0.6;
-			break;
-		}
-		default:
-		{
-			x *= 0.35;
-			y *= 0.35;
-			break;
-		}
-	};
+//	switch(mCurrRobotMode)
+//	{
+//		case ROBOT_POWER_MODE::FULL:
+//		{
+//			break;
+//		}
+//		case ROBOT_POWER_MODE::MED:
+//		{
+//			x *= 0.6;
+//			y *= 0.6;
+//			break;
+//		}
+//		default:
+//		{
+//			x *= 0.35;
+//			y *= 0.35;
+//			break;
+//		}
+//	};
 
-	DriveHelper::DriveMotorValues driveValues = mDriveHelper.calculateOutput(y, x, quickTurn, true);
+//	DriveHelper::DriveMotorValues driveValues = mDriveHelper.calculateOutput(y, x, quickTurn, true);
+
+	DriveHelper::DriveMotorValues driveValues;
+	driveValues.left = y + x;
+	driveValues.right = y - x;
+
+	
+
 	mLeftMaster->Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, std::fmax(std::fmin(driveValues.left, 1.0), -1.0));
 	mRightMaster->Set(ctre::phoenix::motorcontrol::ControlMode::PercentOutput, std::fmax(std::fmin(driveValues.right, 1.0), -1.0));
 
